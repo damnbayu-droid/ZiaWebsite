@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Loader2, Plus, Users, Hash } from 'lucide-react'
+import { Loader2, Plus, Users, Hash, ArrowLeft } from 'lucide-react'
 
 export default function ClassesPage() {
     const supabase = createClient()
@@ -127,7 +128,12 @@ export default function ClassesPage() {
     return (
         <div className="min-h-screen bg-gray-50 pb-24 safe-area-inset-bottom">
             <header className="bg-white px-4 py-4 sticky top-0 z-10 safe-area-inset-top shadow-sm flex items-center justify-between">
-                <h1 className="text-lg font-bold text-gray-900">Kelas Saya</h1>
+                <div className="flex items-center gap-3">
+                    <Link href="/" className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors">
+                        <ArrowLeft className="w-5 h-5 text-gray-600" />
+                    </Link>
+                    <h1 className="text-lg font-bold text-gray-900">Kelas Saya</h1>
+                </div>
                 <div className="flex gap-2">
                     <Dialog open={isJoinOpen} onOpenChange={setIsJoinOpen}>
                         <DialogTrigger asChild>

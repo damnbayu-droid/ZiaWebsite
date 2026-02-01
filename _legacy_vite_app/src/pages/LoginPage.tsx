@@ -85,7 +85,7 @@ export function LoginPage() {
             />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-1">
-            Trea's Learning Hub
+            Trea Arsy'zia Damopolii
           </h1>
           <p className="text-sm text-gray-600">
             Ruang Belajar Pribadi Kamu

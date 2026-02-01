@@ -20,6 +20,8 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
+import { VerificationGate } from "@/components/auth/VerificationGate";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,7 +29,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <VerificationGate>
+          {children}
+        </VerificationGate>
+      </body>
     </html>
   );
 }

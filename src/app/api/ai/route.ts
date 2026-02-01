@@ -46,6 +46,13 @@ export async function POST(req: Request) {
         // 3. Construct Message History
         // We trust the history passed from client strictly for conversation flow,
         // but critical context is injected server-side.
+
+        // Fix: Map 'ai' role from frontend to 'assistant' for OpenAI
+        const sanitizedHistory = (history || []).map((msg: any) => ({
+            role: msg.role === 'ai' ? 'assistant' : msg.role,
+            content: msg.content
+        }))
+
         const conversation: OpenClawMessage[] = [
             {
                 role: 'system',
@@ -58,7 +65,7 @@ export async function POST(req: Request) {
                 
                 Answer strictly based on educational needs.`
             },
-            ...(history || []),
+            ...sanitizedHistory,
             { role: 'user', content: message }
         ]
 

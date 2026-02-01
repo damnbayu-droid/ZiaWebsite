@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Lock, Mail, Eye, EyeOff, User, Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2, Lock, Mail, Eye, EyeOff, User } from 'lucide-react';
+import Link from 'next/link';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -51,7 +52,15 @@ export default function LoginPage() {
                 });
 
                 if (error) {
-                    setError(error.message);
+                    if (error.message.includes('rate limit')) {
+                        setError('Terlalu banyak percobaan. Mohon tunggu beberapa saat atau hubungi Admin.');
+                    } else if (error.message.includes('User already registered')) {
+                        setError('Email sudah terdaftar. Silakan masuk.');
+                    } else if (error.message.includes('Signups not allowed')) {
+                        setError('Pendaftaran akun baru sedang dinonaktifkan oleh Admin (Supabase Settings).');
+                    } else {
+                        setError(error.message);
+                    }
                 } else {
                     // Check if session was created (auto sign in)
                     // Usually signUp returns session if email confirmation is off, 
@@ -59,7 +68,7 @@ export default function LoginPage() {
                     setError(null);
                     setIsSignUp(false);
                     setPassword('');
-                    alert('Akun berhasil dibuat! Silakan masuk.');
+                    alert('Akun berhasil dibuat! Silakan masuk (Menunggu Verifikasi Admin).');
                 }
             } else {
                 const { error } = await supabase.auth.signInWithPassword({
@@ -70,8 +79,13 @@ export default function LoginPage() {
                 if (error) {
                     setError('Email atau kata sandi salah. Silakan coba lagi.');
                 } else {
-                    router.refresh(); // Refresh server components
-                    router.push('/');
+                    router.refresh();
+                    // Direct Admin to Dashboard
+                    if (email === 'damnbayu@gmail.com') {
+                        router.push('/admin');
+                    } else {
+                        router.push('/');
+                    }
                 }
             }
         } catch (err) {
@@ -90,6 +104,26 @@ export default function LoginPage() {
         setFullName('');
     };
 
+    const handleResetPassword = async () => {
+        if (!email.trim()) {
+            setError('Mohon isi email terlebih dahulu untuk mereset kata sandi.');
+            return;
+        }
+        try {
+            setLoading(true);
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/profile/update-password`,
+            });
+            if (error) throw error;
+            alert('Tautan reset kata sandi telah dikirim ke email Anda via Supabase (cek spam juga).');
+        } catch (err: any) {
+            console.error(err);
+            setError(err.message || 'Gagal mengirim tautan reset.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="min-h-screen gradient-pink flex items-center justify-center p-4 safe-area-inset-top safe-area-inset-bottom">
             <div className="w-full max-w-sm">
@@ -104,7 +138,7 @@ export default function LoginPage() {
                         />
                     </div>
                     <h1 className="text-2xl font-bold text-gray-900 mb-1">
-                        Trea's Learning Hub
+                        Trea Arsy'zia Damopolii
                     </h1>
                     <p className="text-sm text-gray-600">
                         Ruang Belajar Pribadi Kamu
@@ -165,20 +199,25 @@ export default function LoginPage() {
                                     />
                                 </div>
                             </div>
+                            {/* Forgot Password Link */}
+                            {!isSignUp && (
+                                <div className="flex justify-end -mt-2"> {/* Adjusted margin to bring it closer to email field */}
+                                    <Link
+                                        href="/forgot-password"
+                                        className="text-xs text-pink-600 hover:text-pink-700 font-medium"
+                                    >
+                                        Lupa Kata Sandi?
+                                    </Link>
+                                </div>
+                            )}
 
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
                                     <Label htmlFor="password" className="text-sm font-medium">
                                         Kata Sandi
                                     </Label>
-                                    <button
-                                        type="button"
-                                        onClick={() => alert('Fitur Lupa Kata Sandi akan segera hadir!')}
-                                        className="text-xs text-pink-500 hover:text-pink-600 font-medium"
-                                    >
-                                        Lupa Kata Sandi?
-                                    </button>
                                 </div>
+
                                 <div className="relative">
                                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                     <Input
@@ -193,7 +232,7 @@ export default function LoginPage() {
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 z-10 p-1"
                                     >
                                         {showPassword ? (
                                             <EyeOff className="w-5 h-5" />
@@ -249,6 +288,6 @@ export default function LoginPage() {
                     Pribadi & Aman • Khusus untuk Siswa
                 </p>
             </div>
-        </div>
+        </div >
     );
 }

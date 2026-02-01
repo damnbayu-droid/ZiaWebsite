@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { QRCodeSVG } from 'qrcode.react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Loader2, Download, ExternalLink, ShieldCheck, AlertCircle } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
@@ -121,12 +122,12 @@ export default function StudentIdentityPage() {
                 <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-pink-500 to-rose-600" />
 
                 <div className="relative z-10 mt-8 mb-4">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                        src={profile.avatar_url || '/placeholder-user.jpg'}
-                        alt="Profile"
-                        className="w-24 h-24 rounded-full border-4 border-white shadow-md object-cover bg-gray-200"
-                    />
+                    <Avatar className="w-24 h-24 border-4 border-white shadow-md">
+                        <AvatarImage src={profile.avatar_url || ''} />
+                        <AvatarFallback className="bg-pink-100 text-pink-600 text-2xl font-bold border-4 border-white shadow-md flex items-center justify-center w-full h-full rounded-full">
+                            {profile.full_name?.[0]?.toUpperCase() || 'S'}
+                        </AvatarFallback>
+                    </Avatar>
                 </div>
 
                 <h2 className="text-xl font-bold text-gray-900">{profile.full_name}</h2>

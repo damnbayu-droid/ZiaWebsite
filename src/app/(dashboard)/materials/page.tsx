@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { FileText, Image as ImageIcon, Trash2, Plus, Loader2, Download, File, Clock } from 'lucide-react'
+import { FileText, Image as ImageIcon, Trash2, Plus, Loader2, Download, File, Clock, ArrowLeft } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { format } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
@@ -130,7 +131,12 @@ export default function MaterialsPage() {
     return (
         <div className="min-h-screen bg-gray-50 pb-24 safe-area-inset-bottom">
             <header className="bg-white px-4 py-4 sticky top-0 z-10 safe-area-inset-top shadow-sm flex items-center justify-between">
-                <h1 className="text-lg font-bold text-gray-900">Materi Belajar</h1>
+                <div className="flex items-center gap-3">
+                    <Link href="/" className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors">
+                        <ArrowLeft className="w-5 h-5 text-gray-600" />
+                    </Link>
+                    <h1 className="text-lg font-bold text-gray-900">Materi Belajar</h1>
+                </div>
                 <Dialog open={isOpen} onOpenChange={setIsOpen}>
                     <DialogTrigger asChild>
                         <Button size="sm" className="rounded-full h-8 w-8 p-0 bg-pink-500 hover:bg-pink-600">

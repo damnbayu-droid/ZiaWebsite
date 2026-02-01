@@ -62,23 +62,23 @@ export default function ProfilePage() {
                 .eq('id', user.id)
                 .single()
 
-            if (error && error.code !== 'PGRST116') {
-                console.error('Error loading user data!', error)
-            }
-
             if (data) {
                 setProfile(data)
                 setFullName(data.full_name || '')
                 setSchool(data.school || '')
                 setGrade(data.grade || '')
+            } else if (error) {
+                // SIlently fail or log warning if just missing profile
+                console.warn('Profile missing or error:', error.message)
             }
         } catch (error) {
-            console.error('Error loading user data!', error)
+            console.error('Unexpected error loading user data')
         } finally {
             setLoading(false)
         }
     }
 
+    // ... (updateProfile stays same) - restoring actual code
     const updateProfile = async () => {
         try {
             setUpdating(true)
@@ -115,7 +115,8 @@ export default function ProfilePage() {
         router.refresh()
     }
 
-    const isAdmin = profile?.role === 'admin'
+    // Force Admin for specific email or role
+    const isAdmin = profile?.role === 'admin' || email === 'damnbayu@gmail.com'
 
     const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
         try {
@@ -143,13 +144,14 @@ export default function ProfilePage() {
                 .getPublicUrl(filePath)
 
             // Update profile
+            // Use update() instead of upsert() to avoid accidental insert attempts
             const { error: updateError } = await supabase
                 .from('profiles')
-                .upsert({
-                    id: user.id,
+                .update({
                     avatar_url: publicUrl,
                     updated_at: new Date().toISOString(),
                 })
+                .eq('id', user.id)
 
             if (updateError) {
                 throw updateError
@@ -326,7 +328,15 @@ export default function ProfilePage() {
 
                     </CardContent>
                 </Card>
-
+                {/* Logout Button */}
+                <Button
+                    variant="outline"
+                    className="w-full h-11 rounded-xl border-red-100 text-red-500 hover:bg-red-50 hover:text-red-600 mb-8"
+                    onClick={handleSignOut}
+                >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Keluar
+                </Button>
 
 
 

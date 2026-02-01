@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Plus, CheckCircle, Clock } from 'lucide-react'
+import { Plus, CheckCircle, Clock, ArrowLeft } from 'lucide-react'
 import { format } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
 
@@ -46,7 +46,12 @@ export default function AssignmentsPage() {
     return (
         <div className="min-h-screen bg-gray-50 pb-24 safe-area-inset-bottom">
             <header className="bg-white px-4 py-4 sticky top-0 z-10 safe-area-inset-top shadow-sm flex items-center justify-between">
-                <h1 className="text-lg font-bold text-gray-900">Tugas</h1>
+                <div className="flex items-center gap-3">
+                    <Link href="/" className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors">
+                        <ArrowLeft className="w-5 h-5 text-gray-600" />
+                    </Link>
+                    <h1 className="text-lg font-bold text-gray-900">Tugas</h1>
+                </div>
                 <Link href="/assignments/new">
                     <Button size="sm" className="rounded-full h-8 w-8 p-0 bg-pink-500 hover:bg-pink-600">
                         <Plus className="w-5 h-5 text-white" />
