@@ -5,52 +5,92 @@ import { createClient } from '@/lib/supabase/client'
 import { QRCodeSVG } from 'qrcode.react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Loader2, ArrowRight, ShieldCheck } from 'lucide-react'
+import { Loader2, ArrowRight } from 'lucide-react'
 
 export function IdentityBarcodeView({ onEnter }: { onEnter: () => void }) {
     const supabase = createClient()
     const [loading, setLoading] = useState(true)
+    const [profile, setProfile] = useState<any>(null)
     const [identity, setIdentity] = useState<any>(null)
+    const [userId, setUserId] = useState<string>('')
 
     useEffect(() => {
-        fetchIdentity()
+        fetchData()
     }, [])
 
-    const fetchIdentity = async () => {
+    const fetchData = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return
 
-            // Fetch student identity
-            const { data: identityData, error: identityError } = await supabase
-                .from('student_identity')
-                .select('*')
-                .eq('user_id', user.id)
-                .single()
+            setUserId(user.id)
 
-            if (identityError) {
-                console.error('Identity error:', identityError)
-                setIdentity(null)
-                setLoading(false)
-                return
-            }
-
-            // Fetch profile separately
+            // Fetch profile
             const { data: profileData } = await supabase
                 .from('profiles')
                 .select('full_name, avatar_url, grade, school')
                 .eq('id', user.id)
                 .single()
 
-            // Combine the data
-            setIdentity({
-                ...identityData,
-                profiles: profileData
-            })
+            setProfile(profileData)
+
+            // Try to fetch student identity (may not exist for new users)
+            const { data: identityData } = await supabase
+                .from('student_identity')
+                .select('*')
+                .eq('user_id', user.id)
+                .maybeSingle() // Use maybeSingle to avoid error if not found
+
+            // If no identity exists, create one
+            if (!identityData) {
+                await createIdentity(user.id)
+            } else {
+                setIdentity(identityData)
+            }
         } catch (e) {
-            console.error(e)
+            console.error('Error fetching data:', e)
         } finally {
             setLoading(false)
+        }
+    }
+
+    const createIdentity = async (userId: string) => {
+        try {
+            // Generate a unique public token
+            const publicToken = `ZIA-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+
+            const now = new Date()
+            const expiresAt = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()) // 1 year from now
+
+            const { data, error } = await supabase
+                .from('student_identity')
+                .insert({
+                    user_id: userId,
+                    public_token: publicToken,
+                    activated_at: now.toISOString(),
+                    expires_at: expiresAt.toISOString(),
+                    is_active: true
+                })
+                .select()
+                .single()
+
+            if (error) {
+                console.error('Error creating identity:', error)
+                // Even if creation fails, we can still show the barcode with user ID
+                setIdentity({
+                    public_token: userId,
+                    student_number: null
+                })
+            } else {
+                setIdentity(data)
+            }
+        } catch (e) {
+            console.error('Error creating identity:', e)
+            // Fallback: use user ID as token
+            setIdentity({
+                public_token: userId,
+                student_number: null
+            })
         }
     }
 
@@ -60,23 +100,9 @@ export function IdentityBarcodeView({ onEnter }: { onEnter: () => void }) {
         </div>
     )
 
-    if (!identity) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-6 text-center">
-                <div className="w-20 h-20 rounded-full bg-pink-500/20 flex items-center justify-center mb-6">
-                    <ShieldCheck className="w-10 h-10 text-pink-500" />
-                </div>
-                <h2 className="text-xl font-bold mb-2">Identitas Belum Aktif</h2>
-                <p className="text-gray-400 text-sm mb-8">Data identitas digital kamu sedang diproses atau belum diaktifkan oleh Admin.</p>
-                <Button onClick={onEnter} className="w-full max-w-xs h-12 rounded-xl gradient-primary text-white">
-                    Masuk ke Dashboard <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-            </div>
-        )
-    }
-
-    const { profiles, public_token, student_number } = identity
-    const qrUrl = `https://zia.biz.id/id/${public_token}`
+    // Use identity token or fallback to user ID
+    const qrToken = identity?.public_token || userId
+    const qrUrl = `https://zia.biz.id/id/${qrToken}`
 
     return (
         <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-6 text-white overflow-hidden relative">
@@ -86,23 +112,27 @@ export function IdentityBarcodeView({ onEnter }: { onEnter: () => void }) {
 
             <div className="w-full max-w-sm flex flex-col items-center z-10">
                 <Avatar className="w-24 h-24 border-4 border-white/10 shadow-2xl mb-4">
-                    <AvatarImage src={profiles?.avatar_url || ''} />
+                    <AvatarImage src={profile?.avatar_url || ''} />
                     <AvatarFallback className="bg-pink-600 text-white text-2xl font-bold">
-                        {profiles?.full_name?.[0]?.toUpperCase() || 'S'}
+                        {profile?.full_name?.[0]?.toUpperCase() || 'S'}
                     </AvatarFallback>
                 </Avatar>
 
-                <h1 className="text-2xl font-bold tracking-tight">{profiles?.full_name}</h1>
-                <p className="text-pink-400 text-sm font-medium">{profiles?.school || 'SMAN 1 Kotabunan'}</p>
-                <p className="text-gray-400 text-xs mt-1 mb-8 font-mono">NIS: {student_number || '----------'}</p>
+                <h1 className="text-2xl font-bold tracking-tight">{profile?.full_name || 'Siswa'}</h1>
+                <p className="text-pink-400 text-sm font-medium">{profile?.school || 'SMAN 1 Kotabunan'}</p>
+                <p className="text-gray-400 text-xs mt-1 mb-8 font-mono">
+                    NIS: {identity?.student_number || '----------'}
+                </p>
 
                 <div className="bg-white p-4 rounded-3xl shadow-2xl mb-8 transform transition-transform hover:scale-105">
                     <QRCodeSVG value={qrUrl} size={220} level={'H'} includeMargin />
                 </div>
 
                 <div className="text-center space-y-1 mb-12">
-                    <p className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">Public Token</p>
-                    <p className="text-sm font-bold tracking-tighter text-gray-300">{public_token}</p>
+                    <p className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">ID Token</p>
+                    <p className="text-sm font-bold tracking-tighter text-gray-300 break-all px-4">
+                        {qrToken}
+                    </p>
                 </div>
 
                 <Button
