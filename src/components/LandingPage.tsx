@@ -273,6 +273,27 @@ export function LandingPage({ onPreview, onLogin }: { onPreview: () => void, onL
                         <a href="#" className="text-sm text-gray-400 hover:text-gray-900 transition-colors">Syarat & Ketentuan</a>
                     </div>
                 </div>
+
+                {/* Domain Links */}
+                <div className="max-w-7xl mx-auto mt-8 pt-6 border-t border-gray-200">
+                    <div className="flex flex-wrap justify-center items-center gap-3 text-xs text-gray-400">
+                        <a href="https://indonesianvisas.com" target="_blank" rel="noopener noreferrer" className="hover:text-pink-600 transition-colors">
+                            indonesianvisas.com
+                        </a>
+                        <span className="text-gray-300">|</span>
+                        <a href="https://balihelp.id" target="_blank" rel="noopener noreferrer" className="hover:text-pink-600 transition-colors">
+                            balihelp.id
+                        </a>
+                        <span className="text-gray-300">|</span>
+                        <a href="https://indodesign.website" target="_blank" rel="noopener noreferrer" className="hover:text-pink-600 transition-colors">
+                            indodesign.website
+                        </a>
+                        <span className="text-gray-300">|</span>
+                        <a href="https://kotabunan.shop" target="_blank" rel="noopener noreferrer" className="hover:text-pink-600 transition-colors">
+                            kotabunan.shop
+                        </a>
+                    </div>
+                </div>
             </footer>
         </div>
     )
