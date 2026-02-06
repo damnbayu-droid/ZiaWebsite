@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Sparkles, ArrowRight, BookOpen, ShieldCheck, Zap } from 'lucide-react'
+import Image from 'next/image'
 
 export function LandingHeroView({ onPreview, onLogin }: { onPreview: () => void, onLogin: () => void }) {
     return (
@@ -12,11 +13,18 @@ export function LandingHeroView({ onPreview, onLogin }: { onPreview: () => void,
 
             <div className="z-10 max-w-sm w-full space-y-8">
                 <div className="flex flex-col items-center">
-                    <div className="w-20 h-20 rounded-3xl gradient-primary flex items-center justify-center shadow-2xl shadow-pink-200 mb-6 transform rotate-6">
-                        <BookOpen className="w-10 h-10 text-white" />
+                    <div className="w-20 h-20 mb-6 transform rotate-6 drop-shadow-2xl">
+                        <Image
+                            src="/image/logo sman 1 kotabunan.webp"
+                            alt="Logo SMAN 1 Kotabunan"
+                            width={80}
+                            height={80}
+                            className="w-full h-full object-contain"
+                            priority
+                        />
                     </div>
                     <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-2">
-                        Zia <span className="text-pink-600">Archive</span>
+                        SMAN 1 <span className="text-pink-600">Kotabunan</span>
                     </h1>
                     <p className="text-gray-500 text-sm leading-relaxed">
                         Platform pendamping belajar pintar untuk siswa masa kini. Simpan, rekam, dan pindai materi dalam satu genggaman.
@@ -35,6 +43,7 @@ export function LandingHeroView({ onPreview, onLogin }: { onPreview: () => void,
                     <Button
                         onClick={onLogin}
                         className="w-full h-14 rounded-2xl gradient-primary text-white font-bold text-lg shadow-xl shadow-pink-200 flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                        aria-label="Mulai Masuk Sekarang"
                     >
                         Mulai Sekarang <ArrowRight className="w-5 h-5" />
                     </Button>

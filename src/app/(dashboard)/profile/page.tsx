@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Loader2, Camera, User, School, GraduationCap, ArrowLeft, LogOut, QrCode, ChevronRight } from 'lucide-react'
+import { Loader2, Camera, User, School, GraduationCap, ArrowLeft, LogOut, QrCode, ChevronRight, CheckCircle } from 'lucide-react'
 import { BottomNav } from '@/components/BottomNav'
 
 // Define Profile interface locally or import from types
@@ -21,6 +21,7 @@ interface Profile {
     grade: string | null
     role: string | null
     updated_at: string
+    student_number?: string | null
 }
 
 export default function ProfilePage() {
@@ -38,6 +39,8 @@ export default function ProfilePage() {
     const [school, setSchool] = useState('')
     const [grade, setGrade] = useState('')
     const [email, setEmail] = useState('')
+    const [studentNumber, setStudentNumber] = useState('')
+    const [isVerified, setIsVerified] = useState(false)
 
     useEffect(() => {
         getProfile()
@@ -64,10 +67,19 @@ export default function ProfilePage() {
                 .single()
 
             if (data) {
-                setProfile(data)
+                // Also fetch student identity for student_number
+                const { data: identity } = await supabase
+                    .from('student_identity')
+                    .select('student_number')
+                    .eq('user_id', user.id)
+                    .single()
+
+                setProfile({ ...data, student_number: identity?.student_number })
                 setFullName(data.full_name || '')
                 setSchool(data.school || '')
                 setGrade(data.grade || '')
+                setStudentNumber(identity?.student_number || '')
+                setIsVerified(data.is_verified || false)
             } else if (error) {
                 // SIlently fail or log warning if just missing profile
                 console.warn('Profile missing or error:', error.message)
@@ -98,9 +110,18 @@ export default function ProfilePage() {
             const { error } = await supabase.from('profiles').upsert(updates)
 
             if (error) throw error
-            alert('Profil berhasil diperbarui!')
 
-            // Refresh local data
+            // Update student identity if verified
+            if (isVerified && studentNumber) {
+                const { error: idError } = await supabase
+                    .from('student_identity')
+                    .update({ student_number: studentNumber })
+                    .eq('user_id', user.id)
+
+                if (idError) console.error('Failed to update NIS:', idError)
+            }
+
+            alert('Profil berhasil diperbarui!')
             getProfile()
         } catch (error) {
             alert('Gagal memperbarui profil!')
@@ -271,6 +292,23 @@ export default function ProfilePage() {
                         <CardDescription>Perbarui data dirimu di sini.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
+
+                        <div className={`space-y-2 ${!isVerified ? 'opacity-70' : ''}`}>
+                            <Label className="text-sm font-medium">Nomor Induk Siswa (NIS)</Label>
+                            <div className="relative">
+                                <CheckCircle className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isVerified ? 'text-pink-500' : 'text-gray-400'}`} />
+                                <Input
+                                    value={studentNumber}
+                                    onChange={(e) => setStudentNumber(e.target.value)}
+                                    disabled={!isVerified}
+                                    placeholder={isVerified ? "Masukkan NIS" : "Hanya untuk siswa terverifikasi"}
+                                    className="pl-9 h-11 rounded-xl bg-white border-gray-100 font-mono tracking-wider"
+                                />
+                            </div>
+                            <p className="text-[10px] text-gray-400">
+                                {isVerified ? 'Kamu bisa mengubah NIS karena sudah terverifikasi.' : 'Nomor ini hanya bisa diubah jika akun kamu sudah diverifikasi Admin.'}
+                            </p>
+                        </div>
 
                         <div className="space-y-2">
                             <Label htmlFor="fullName" className="text-sm font-medium">Nama Lengkap</Label>

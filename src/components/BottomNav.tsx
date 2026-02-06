@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Book, FileText, User } from 'lucide-react';
+import { Home, Book, FileText, User, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function BottomNav() {
@@ -11,6 +11,7 @@ export function BottomNav() {
     const navItems = [
         { href: '/', label: 'Beranda', icon: Home },
         { href: '/subjects', label: 'Pelajaran', icon: Book },
+        { href: '/arena', label: 'Arena', icon: Trophy },
         { href: '/notes', label: 'Catatan', icon: FileText },
         { href: '/profile', label: 'Profil', icon: User },
     ];
@@ -24,6 +25,7 @@ export function BottomNav() {
                         <Link
                             key={item.href}
                             href={item.href}
+                            aria-label={`Pindah ke halaman ${item.label}`}
                             className={cn(
                                 "flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors",
                                 isActive ? "text-pink-600" : "text-gray-400 hover:text-gray-600"

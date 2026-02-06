@@ -60,8 +60,8 @@ export function IdentityBarcodeView({ onEnter }: { onEnter: () => void }) {
         )
     }
 
-    const { profiles, schools, public_token } = identity
-    const qrUrl = `${window.location.origin}/id/${public_token}`
+    const { profiles, schools, public_token, student_number } = identity
+    const qrUrl = `https://zia.biz.id/id/${public_token}`
 
     return (
         <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-6 text-white overflow-hidden relative">
@@ -78,7 +78,8 @@ export function IdentityBarcodeView({ onEnter }: { onEnter: () => void }) {
                 </Avatar>
 
                 <h1 className="text-2xl font-bold tracking-tight">{profiles?.full_name}</h1>
-                <p className="text-pink-400 text-sm font-medium mb-8">{schools?.name}</p>
+                <p className="text-pink-400 text-sm font-medium">{schools?.name}</p>
+                <p className="text-gray-400 text-xs mt-1 mb-8 font-mono">NIS: {student_number || '----------'}</p>
 
                 <div className="bg-white p-4 rounded-3xl shadow-2xl mb-8 transform transition-transform hover:scale-105">
                     <QRCodeSVG value={qrUrl} size={220} level={'H'} includeMargin />
@@ -96,7 +97,7 @@ export function IdentityBarcodeView({ onEnter }: { onEnter: () => void }) {
                     Masuk <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
 
-                <p className="mt-8 text-[10px] text-gray-500 uppercase tracking-widest">Digital Student Card • Zia Platform</p>
+                <p className="mt-8 text-[10px] text-gray-500 uppercase tracking-widest">Digital Student Card • SMAN 1 Kotabunan</p>
             </div>
         </div>
     )

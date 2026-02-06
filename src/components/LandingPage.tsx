@@ -42,13 +42,17 @@ export function LandingPage({ onPreview, onLogin }: { onPreview: () => void, onL
             {/* Navigation Placeholder/Simple Header */}
             <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-                            <BookOpen className="w-5 h-5 text-white" />
-                        </div>
-                        <span className="text-xl font-bold tracking-tight">Zia Archive</span>
+                    <div className="flex items-center gap-3">
+                        <Image
+                            src="/image/logo sman 1 kotabunan.webp"
+                            alt="Logo SMAN 1 Kotabunan"
+                            width={40}
+                            height={40}
+                            className="w-10 h-10 object-contain"
+                        />
+                        <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-pink-600 to-rose-600">SMAN 1 Kotabunan</span>
                     </div>
-                    <Button onClick={onLogin} variant="ghost" className="font-semibold text-gray-600">
+                    <Button onClick={onLogin} variant="ghost" className="font-semibold text-gray-600" aria-label="Masuk ke akun">
                         Masuk
                     </Button>
                 </div>
@@ -96,13 +100,15 @@ export function LandingPage({ onPreview, onLogin }: { onPreview: () => void, onL
                         <Button
                             onClick={onLogin}
                             className="flex-1 h-14 rounded-2xl gradient-primary text-white font-bold text-lg shadow-xl shadow-pink-200 active:scale-95 transition-transform"
+                            aria-label="Masuk Sekarang"
                         >
-                            Daftar Sekarang
+                            Masuk Sekarang
                         </Button>
                         <Button
                             onClick={onPreview}
                             variant="outline"
                             className="flex-1 h-14 rounded-2xl border-2 border-gray-100 font-bold text-lg hover:bg-gray-50 active:scale-95 transition-transform"
+                            aria-label="Lihat Kedalam Aplikasi"
                         >
                             Lihat Kedalam
                         </Button>
@@ -117,11 +123,12 @@ export function LandingPage({ onPreview, onLogin }: { onPreview: () => void, onL
                     >
                         <Image
                             src="/landing-illustration.png"
-                            alt="Indonesian High School Students"
+                            alt="Ilustrasi Siswa SMA Indonesia menggunakan Zia"
                             width={1200}
                             height={800}
                             className="w-full h-auto rounded-3xl shadow-2xl"
                             priority
+                            sizes="(max-width: 768px) 100vw, 1200px"
                         />
                     </motion.div>
                 </div>
@@ -248,13 +255,17 @@ export function LandingPage({ onPreview, onLogin }: { onPreview: () => void, onL
             <footer className="py-12 border-t border-gray-100 px-4 bg-gray-50">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 text-center md:text-left">
                     <div>
-                        <div className="flex items-center gap-2 mb-4 justify-center md:justify-start">
-                            <div className="w-6 h-6 rounded bg-pink-500 flex items-center justify-center">
-                                <BookOpen className="w-4 h-4 text-white" />
-                            </div>
-                            <span className="font-bold">Zia Archive</span>
+                        <div className="flex items-center gap-3 mb-4 justify-center md:justify-start">
+                            <Image
+                                src="/image/logo sman 1 kotabunan.webp"
+                                alt="Logo SMAN 1 Kotabunan"
+                                width={24}
+                                height={24}
+                                className="w-6 h-6 object-contain"
+                            />
+                            <span className="font-bold">SMAN 1 Kotabunan</span>
                         </div>
-                        <p className="text-sm text-gray-500">© 2026 Zia Archive. Dibuat untuk masa depan pendidikan Indonesia.</p>
+                        <p className="text-sm text-gray-500">© 2026 Apps Zia • SMAN 1 Kotabunan. Dibuat untuk masa depan pendidikan Indonesia.</p>
                     </div>
                     <div className="flex gap-6">
                         <a href="#" className="text-sm text-gray-400 hover:text-gray-900 transition-colors">Bantuan</a>

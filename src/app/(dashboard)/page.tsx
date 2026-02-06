@@ -30,11 +30,10 @@ export default function RootPage() {
 
       if (user) {
         setUser(user)
-        setViewMode('barcode')
-        // Pre-fetch dashboard data for smooth transition
+        setViewMode('barcode') // Authenticated users land on the ID Barcode
         fetchDashboardData()
       } else {
-        setViewMode('landing')
+        setViewMode('landing') // Guests land on the SMA Landing Page
       }
     } catch (e) {
       console.error(e)

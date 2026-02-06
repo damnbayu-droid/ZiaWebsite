@@ -55,6 +55,40 @@ export default function NoteEditorPage() {
         }
     }
 
+    const [autoSaving, setAutoSaving] = useState(false)
+
+    useEffect(() => {
+        if (!id || !title.trim()) return
+
+        const timer = setTimeout(() => {
+            handleAutoSave()
+        }, 2000)
+
+        return () => clearTimeout(timer)
+    }, [title, content])
+
+    const handleAutoSave = async () => {
+        try {
+            setAutoSaving(true)
+            const noteData = {
+                title,
+                content,
+                updated_at: new Date().toISOString()
+            }
+            const { error } = await supabase
+                .from('notes')
+                .update(noteData)
+                .eq('id', id)
+
+            if (error) throw error
+            setUpdatedAt(noteData.updated_at)
+        } catch (e) {
+            console.error('Auto-save failed:', e)
+        } finally {
+            setAutoSaving(false)
+        }
+    }
+
     const handleSave = async () => {
         if (!title.trim()) return
 
@@ -71,19 +105,20 @@ export default function NoteEditorPage() {
             }
 
             if (id) {
-                // Update
                 const { error } = await supabase
                     .from('notes')
                     .update(noteData)
                     .eq('id', id)
                 if (error) throw error
+                setUpdatedAt(noteData.updated_at)
             } else {
-                // Create
-                const { error } = await supabase
+                const { data, error } = await supabase
                     .from('notes')
                     .insert(noteData)
+                    .select('id')
+                    .single()
                 if (error) throw error
-                router.push('/notes')
+                router.push(`/notes/${data.id}`)
             }
 
             router.refresh()
@@ -119,6 +154,9 @@ export default function NoteEditorPage() {
                 </button>
 
                 <div className="flex items-center gap-2">
+                    {autoSaving && (
+                        <span className="text-[10px] text-gray-400 font-medium animate-pulse">Menyimpan otomatis...</span>
+                    )}
                     {id && (
                         <button onClick={handleDelete} className="p-2 rounded-full text-red-500 hover:bg-red-50">
                             <Trash2 className="w-5 h-5" />

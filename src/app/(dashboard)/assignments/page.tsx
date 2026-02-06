@@ -27,8 +27,16 @@ export default function AssignmentsPage() {
             const { data, error } = await supabase
                 .from('assignments')
                 .select(`
-          id, title, due_date, status, subjects(name, color)
-        `)
+                    id, 
+                    title, 
+                    due_date, 
+                    status, 
+                    subjects (
+                        name,
+                        color
+                    )
+                `)
+                .eq('user_id', user.id)
                 .order('due_date', { ascending: true })
 
             if (error) {
@@ -72,7 +80,15 @@ export default function AssignmentsPage() {
                                         <div className="flex-1">
                                             <h3 className="text-sm font-semibold text-gray-900">{assignment.title}</h3>
                                             <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-[10px] px-2 py-0.5 bg-gray-100 rounded-full text-gray-500 font-medium">{assignment.subjects?.name}</span>
+                                                <span
+                                                    className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                                                    style={{
+                                                        backgroundColor: assignment.subjects?.color ? `${assignment.subjects.color}20` : '#f3f4f6',
+                                                        color: assignment.subjects?.color || '#6b7280'
+                                                    }}
+                                                >
+                                                    {assignment.subjects?.name || 'Umum'}
+                                                </span>
                                                 {assignment.due_date && <span className="text-[10px] text-gray-400">{format(new Date(assignment.due_date), 'dd MMM HH:mm', { locale: idLocale })}</span>}
                                             </div>
                                         </div>

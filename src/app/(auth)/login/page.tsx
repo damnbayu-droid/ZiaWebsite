@@ -138,10 +138,10 @@ export default function LoginPage() {
                         />
                     </div>
                     <h1 className="text-2xl font-bold text-gray-900 mb-1">
-                        Trea Arsy'zia Damopolii
+                        Learning APP Zia
                     </h1>
                     <p className="text-sm text-gray-600">
-                        Ruang Belajar Pribadi Kamu
+                        Ruang Belajar Teman-teman zia
                     </p>
                 </div>
 

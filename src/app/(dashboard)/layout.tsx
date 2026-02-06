@@ -1,3 +1,6 @@
+import AIBubble from '@/components/AIBubble';
+import { NotificationService } from '@/components/NotificationService';
+
 export default function DashboardLayout({
     children,
 }: {
@@ -6,6 +9,8 @@ export default function DashboardLayout({
     return (
         <div className="pb-32">
             {children}
+            <AIBubble />
+            <NotificationService />
         </div>
     );
 }

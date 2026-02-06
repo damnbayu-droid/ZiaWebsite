@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Book, FileText, CheckCircle, Clock, Users, ArrowRight, Mic, ScanText, MessageSquare, FolderOpen } from 'lucide-react'
+import { Book, FileText, CheckCircle, Clock, Users, ArrowRight, Mic, ScanText, MessageSquare, FolderOpen, Trophy, Bell } from 'lucide-react'
 import AIAssistant from '@/components/AIAssistant'
 import { ActionBlocker } from './ActionBlocker'
 import { BottomNav } from './BottomNav'
@@ -27,12 +27,22 @@ export function DashboardContent({ user, assignments, recentActivity, isGuest = 
                     </h1>
                 </div>
                 {!isGuest && (
-                    <Link href="/chat">
-                        <Button size="icon" variant="ghost" className="rounded-full relative">
-                            <MessageSquare className="w-6 h-6 text-gray-600" />
-                            <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white" />
-                        </Button>
-                    </Link>
+                    <div className="flex items-center gap-1">
+                        <Link href="/notifications">
+                            <Button size="icon" variant="ghost" className="rounded-full relative" aria-label="Lihat Notifikasi">
+                                <Bell className="w-6 h-6 text-gray-600" />
+                                <div className="absolute top-2 right-2 w-2 h-2 bg-pink-500 rounded-full border border-white" />
+                            </Button>
+                        </Link>
+                        <Link href="/messages">
+                            <Button size="icon" variant="ghost" className="rounded-full relative" aria-label="Buka Pesan">
+                                <MessageSquare className="w-6 h-6 text-gray-600" />
+                                <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-blue-500 rounded-full border border-white flex items-center justify-center text-[8px] text-white font-bold">
+                                    3
+                                </div>
+                            </Button>
+                        </Link>
+                    </div>
                 )}
             </header>
 
@@ -49,12 +59,17 @@ export function DashboardContent({ user, assignments, recentActivity, isGuest = 
                         { label: 'Tugas', icon: CheckCircle, href: '/assignments', color: 'bg-orange-100 text-orange-600' },
                         { label: 'Catatan', icon: FileText, href: '/notes', color: 'bg-blue-100 text-blue-600' },
                         { label: 'Kelas', icon: Users, href: '/classes', color: 'bg-green-100 text-green-600' },
+                        { label: 'Arena', icon: Trophy, href: '/arena', color: 'bg-yellow-100 text-yellow-600' },
                         { label: 'Rekam', icon: Mic, href: '/recordings', color: 'bg-purple-100 text-purple-600' },
                         { label: 'Pindai', icon: ScanText, href: '/scan', color: 'bg-indigo-100 text-indigo-600' },
                         { label: 'Materi', icon: FolderOpen, href: '/materials', color: 'bg-teal-100 text-teal-600' },
                     ].map((item) => (
                         <ActionBlocker key={item.label} isGuest={isGuest}>
-                            <Link href={isGuest ? '#' : item.href} className="flex flex-col items-center gap-2 group">
+                            <Link
+                                href={isGuest ? '#' : item.href}
+                                className="flex flex-col items-center gap-2 group"
+                                aria-label={`Buka menu ${item.label}`}
+                            >
                                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm transition-transform group-active:scale-95 ${item.color}`}>
                                     <item.icon className="w-6 h-6" />
                                 </div>

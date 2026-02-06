@@ -105,6 +105,16 @@ export default async function PublicIdentityPage({
                     </div>
 
                     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                        <CheckCircle className="w-5 h-5 text-gray-400" />
+                        <div className="text-left">
+                            <p className="text-xs text-gray-500">Nomor Induk Siswa (NIS)</p>
+                            <p className="font-bold text-gray-900 font-mono tracking-wider">
+                                {identity.student_number || '-'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
                         <Calendar className="w-5 h-5 text-gray-400" />
                         <div className="text-left">
                             <p className="text-xs text-gray-500">Berlaku Hingga</p>
@@ -116,9 +126,12 @@ export default async function PublicIdentityPage({
                 </div>
             </CardContent>
 
-            <CardFooter className="bg-gray-50 py-3 text-center justify-center">
-                <p className="text-xs text-gray-400">
-                    Identitas Digital Resmi • SMAN 1 Kotabunan
+            <CardFooter className="bg-gray-50 py-4 text-center justify-center flex flex-col gap-1">
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                    Identitas Digital Resmi
+                </p>
+                <p className="text-xs text-gray-500 font-medium">
+                    Zia Archive • zia.biz.id
                 </p>
             </CardFooter>
         </Card>
