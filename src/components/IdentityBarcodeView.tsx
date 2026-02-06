@@ -21,17 +21,32 @@ export function IdentityBarcodeView({ onEnter }: { onEnter: () => void }) {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return
 
-            const { data } = await supabase
+            // Fetch student identity
+            const { data: identityData, error: identityError } = await supabase
                 .from('student_identity')
-                .select(`
-                    *,
-                    profiles:user_id (full_name, avatar_url, grade),
-                    schools:school_id (name)
-                `)
+                .select('*')
                 .eq('user_id', user.id)
                 .single()
 
-            setIdentity(data)
+            if (identityError) {
+                console.error('Identity error:', identityError)
+                setIdentity(null)
+                setLoading(false)
+                return
+            }
+
+            // Fetch profile separately
+            const { data: profileData } = await supabase
+                .from('profiles')
+                .select('full_name, avatar_url, grade, school')
+                .eq('id', user.id)
+                .single()
+
+            // Combine the data
+            setIdentity({
+                ...identityData,
+                profiles: profileData
+            })
         } catch (e) {
             console.error(e)
         } finally {
@@ -60,7 +75,7 @@ export function IdentityBarcodeView({ onEnter }: { onEnter: () => void }) {
         )
     }
 
-    const { profiles, schools, public_token, student_number } = identity
+    const { profiles, public_token, student_number } = identity
     const qrUrl = `https://zia.biz.id/id/${public_token}`
 
     return (
@@ -78,7 +93,7 @@ export function IdentityBarcodeView({ onEnter }: { onEnter: () => void }) {
                 </Avatar>
 
                 <h1 className="text-2xl font-bold tracking-tight">{profiles?.full_name}</h1>
-                <p className="text-pink-400 text-sm font-medium">{schools?.name}</p>
+                <p className="text-pink-400 text-sm font-medium">{profiles?.school || 'SMAN 1 Kotabunan'}</p>
                 <p className="text-gray-400 text-xs mt-1 mb-8 font-mono">NIS: {student_number || '----------'}</p>
 
                 <div className="bg-white p-4 rounded-3xl shadow-2xl mb-8 transform transition-transform hover:scale-105">
