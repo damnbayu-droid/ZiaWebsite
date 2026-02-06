@@ -25,7 +25,7 @@ export default async function PublicIdentityPage({
     if (!identity) {
         return (
             <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-                <Card className="w-full max-w-md shadow-xl border-red-200 bg-red-50">
+                <Card className="w-full max-w-lg shadow-xl border-red-200 bg-red-50">
                     <CardContent className="flex flex-col items-center py-10 text-center space-y-4">
                         <XCircle className="w-16 h-16 text-red-500" />
                         <h2 className="text-2xl font-bold text-red-700">Identitas Tidak Valid</h2>
@@ -51,7 +51,7 @@ export default async function PublicIdentityPage({
     if (!isActive || isExpired) {
         return (
             <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-                <Card className="w-full max-w-md shadow-xl border-orange-200 bg-orange-50">
+                <Card className="w-full max-w-lg shadow-xl border-orange-200 bg-orange-50">
                     <CardContent className="flex flex-col items-center py-10 text-center space-y-4">
                         <XCircle className="w-16 h-16 text-orange-500" />
                         <h2 className="text-2xl font-bold text-orange-700">Identitas Kedaluwarsa</h2>
@@ -66,7 +66,7 @@ export default async function PublicIdentityPage({
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-            <Card className="w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-500">
+            <Card className="w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-500">
                 {/* Header / Banner */}
                 <div className="bg-gradient-to-r from-pink-500 to-rose-600 h-32 relative">
                     <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
