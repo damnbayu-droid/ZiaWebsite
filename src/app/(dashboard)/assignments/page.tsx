@@ -63,20 +63,22 @@ export default function AssignmentsPage() {
                 {loading ? <p className="text-center text-sm text-gray-500">Memuat tugas...</p> :
                     assignments.length === 0 ? <p className="text-center text-gray-500">Tidak ada tugas aktif.</p> :
                         assignments.map(assignment => (
-                            <Card key={assignment.id} className="border-0 shadow-sm rounded-2xl overflow-hidden p-4">
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${assignment.status === 'open' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
-                                        {assignment.status === 'done' ? <CheckCircle className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="text-sm font-semibold text-gray-900">{assignment.title}</h3>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-[10px] px-2 py-0.5 bg-gray-100 rounded-full text-gray-500 font-medium">{assignment.subjects?.name}</span>
-                                            {assignment.due_date && <span className="text-[10px] text-gray-400">{format(new Date(assignment.due_date), 'dd MMM HH:mm', { locale: idLocale })}</span>}
+                            <Link key={assignment.id} href={`/assignments/${assignment.id}`}>
+                                <Card className="border-0 shadow-sm rounded-2xl overflow-hidden p-4 hover:shadow-md transition-shadow">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${assignment.status === 'open' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
+                                            {assignment.status === 'done' ? <CheckCircle className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="text-sm font-semibold text-gray-900">{assignment.title}</h3>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-[10px] px-2 py-0.5 bg-gray-100 rounded-full text-gray-500 font-medium">{assignment.subjects?.name}</span>
+                                                {assignment.due_date && <span className="text-[10px] text-gray-400">{format(new Date(assignment.due_date), 'dd MMM HH:mm', { locale: idLocale })}</span>}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </Card>
+                                </Card>
+                            </Link>
                         ))
                 }
             </main>

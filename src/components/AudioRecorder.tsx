@@ -1,24 +1,30 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Mic, Square, Save, Loader2, Play, Pause } from 'lucide-react'
+import { Mic, Square, Save, Loader2, Play, Pause, FileText } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Checkbox } from '@/components/ui/checkbox'
 
 export function AudioRecorder({ onSave }: { onSave?: () => void }) {
+    const router = useRouter()
     const [isRecording, setIsRecording] = useState(false)
     const [duration, setDuration] = useState(0)
     const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
     const [showSaveDialog, setShowSaveDialog] = useState(false)
     const [title, setTitle] = useState('')
     const [uploading, setUploading] = useState(false)
+    const [transcript, setTranscript] = useState('')
+    const [saveAsNote, setSaveAsNote] = useState(true)
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null)
     const timerRef = useRef<NodeJS.Timeout | null>(null)
     const chunksRef = useRef<BlobPart[]>([])
+    const recognitionRef = useRef<any>(null)
 
     const startRecording = async () => {
         try {
@@ -26,6 +32,34 @@ export function AudioRecorder({ onSave }: { onSave?: () => void }) {
             const mediaRecorder = new MediaRecorder(stream)
             mediaRecorderRef.current = mediaRecorder
             chunksRef.current = []
+
+            // Speech Recognition Setup
+            const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
+            if (SpeechRecognition) {
+                const recognition = new SpeechRecognition()
+                recognition.continuous = true
+                recognition.interimResults = true
+                recognition.lang = 'id-ID' // Indonesian
+
+                recognition.onresult = (event: any) => {
+                    let finalTranscript = ''
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript
+                        }
+                    }
+                    if (finalTranscript) {
+                        setTranscript(prev => prev + ' ' + finalTranscript)
+                    }
+                }
+
+                recognition.onerror = (event: any) => {
+                    console.error('Speech recognition error:', event.error)
+                }
+
+                recognition.start()
+                recognitionRef.current = recognition
+            }
 
             mediaRecorder.ondataavailable = (e) => {
                 if (e.data.size > 0) chunksRef.current.push(e.data)
@@ -42,6 +76,7 @@ export function AudioRecorder({ onSave }: { onSave?: () => void }) {
             mediaRecorder.start()
             setIsRecording(true)
             setDuration(0)
+            setTranscript('')
             timerRef.current = setInterval(() => {
                 setDuration(prev => prev + 1)
             }, 1000)
@@ -57,6 +92,9 @@ export function AudioRecorder({ onSave }: { onSave?: () => void }) {
             mediaRecorderRef.current.stop()
             setIsRecording(false)
             if (timerRef.current) clearInterval(timerRef.current)
+            if (recognitionRef.current) {
+                recognitionRef.current.stop()
+            }
         }
     }
 
@@ -89,11 +127,21 @@ export function AudioRecorder({ onSave }: { onSave?: () => void }) {
 
             if (dbError) throw dbError
 
+            // Save as Note if requested
+            if (saveAsNote && transcript.trim()) {
+                await supabase.from('notes').insert({
+                    user_id: user.id,
+                    title: `Transkrip: ${title}`,
+                    content: transcript,
+                })
+            }
+
             alert('Rekaman disimpan!')
             setAudioBlob(null)
             setShowSaveDialog(false)
             setTitle('')
             setDuration(0)
+            setTranscript('')
             if (onSave) onSave()
 
         } catch (error) {
@@ -125,13 +173,18 @@ export function AudioRecorder({ onSave }: { onSave?: () => void }) {
                         <Mic className="w-8 h-8" />
                     </Button>
                 )}
-                <p className="text-xs text-gray-500">
-                    {isRecording ? 'Sedang merekam...' : 'Ketuk untuk merekam'}
-                </p>
+                <div className="text-center">
+                    <p className="text-xs text-gray-500">
+                        {isRecording ? 'Sedang merekam & mentranskripsi...' : 'Ketuk untuk merekam'}
+                    </p>
+                    {transcript && !isRecording && (
+                        <p className="text-[10px] text-gray-400 mt-2 line-clamp-1 italic">"{transcript}"</p>
+                    )}
+                </div>
             </div>
 
             <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-                <DialogContent className="sm:max-w-md rounded-2xl">
+                <DialogContent className="sm:max-max-w-md rounded-2xl">
                     <DialogHeader>
                         <DialogTitle>Simpan Rekaman</DialogTitle>
                         <DialogDescription>Beri nama untuk rekaman suara ini.</DialogDescription>
@@ -145,10 +198,25 @@ export function AudioRecorder({ onSave }: { onSave?: () => void }) {
                             <Label htmlFor="title">Judul Rekaman</Label>
                             <Input id="title" placeholder="Contoh: Penjelasan Rumus Fisika" value={title} onChange={e => setTitle(e.target.value)} />
                         </div>
+
+                        {transcript && (
+                            <div className="space-y-3">
+                                <Label>Hasil Transkrip (STT)</Label>
+                                <div className="p-3 bg-pink-50/50 border border-pink-100 rounded-xl text-xs text-gray-600 max-h-32 overflow-y-auto leading-relaxed">
+                                    {transcript}
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox id="saveNote" checked={saveAsNote} onCheckedChange={(val) => setSaveAsNote(!!val)} />
+                                    <label htmlFor="saveNote" className="text-xs font-medium text-gray-600 cursor-pointer">
+                                        Simpan hasil transkrip sebagai Catatan
+                                    </label>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                    <DialogFooter>
-                        <Button onClick={() => setShowSaveDialog(false)} variant="outline" className="rounded-xl">Batal</Button>
-                        <Button onClick={handleSave} disabled={uploading} className="rounded-xl gradient-primary text-white">
+                    <DialogFooter className="flex gap-2">
+                        <Button onClick={() => setShowSaveDialog(false)} variant="outline" className="rounded-xl flex-1">Batal</Button>
+                        <Button onClick={handleSave} disabled={uploading} className="rounded-xl gradient-primary text-white flex-1">
                             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan'}
                         </Button>
                     </DialogFooter>

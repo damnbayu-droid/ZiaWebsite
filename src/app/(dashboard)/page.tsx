@@ -15,9 +15,19 @@ export default async function Dashboard() {
     redirect('/login')
   }
 
-  // Fetch pending assignments count?
-  // Fetch unread messages?
-  // For now simple UI.
+  // Fetch pending assignments
+  const { data: assignments } = await supabase
+    .from('assignments')
+    .select('*, classes(name)')
+    .order('deadline', { ascending: true })
+    .limit(3)
+
+  // Fetch recent class threads/messages
+  const { data: recentActivity } = await supabase
+    .from('activity_logs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(1)
 
   return (
     <div className="min-h-screen bg-gray-50 pb-44 safe-area-inset-bottom">
@@ -57,7 +67,6 @@ export default async function Dashboard() {
               <span className="text-xs font-medium text-gray-600">{item.label}</span>
             </Link>
           ))}
-          {/* More... */}
         </div>
 
         {/* Pending Assignments Widget */}
@@ -66,48 +75,51 @@ export default async function Dashboard() {
             <h2 className="font-bold text-lg text-gray-900">Tugas Tertunda</h2>
             <Link href="/assignments" className="text-xs font-semibold text-pink-600">Lihat Semua</Link>
           </div>
-          {/* Placeholder for fetching real data */}
           <div className="space-y-3">
-            <Card className="p-4 flex items-center gap-4 border-0 shadow-sm rounded-2xl">
-              <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center flex-shrink-0">
-                <Clock className="w-5 h-5" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-sm">Latihan Soal Matematika</h3>
-                <p className="text-xs text-gray-400">Tenggat: Besok, 08:00</p>
-              </div>
-              <ArrowRight className="w-4 h-4 text-gray-300" />
-            </Card>
-            <Card className="p-4 flex items-center gap-4 border-0 shadow-sm rounded-2xl">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center flex-shrink-0">
-                <Book className="w-5 h-5" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-sm">Rangkuman Sejarah Bab 3</h3>
-                <p className="text-xs text-gray-400">Tenggat: 3 Hari lagi</p>
-              </div>
-              <ArrowRight className="w-4 h-4 text-gray-300" />
-            </Card>
+            {!assignments || assignments.length === 0 ? (
+              <p className="text-center py-6 text-sm text-gray-400 border-2 border-dashed rounded-2xl">Tidak ada tugas tertunda.</p>
+            ) : (
+              assignments.map((asgn) => (
+                <Link key={asgn.id} href={`/assignments/${asgn.id}`}>
+                  <Card className="p-4 flex items-center gap-4 border-0 shadow-sm rounded-2xl">
+                    <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center flex-shrink-0">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-sm truncate">{asgn.title}</h3>
+                      <p className="text-xs text-gray-400">Tenggat: {asgn.due_date ? new Date(asgn.due_date).toLocaleDateString('id-ID') : '-'}</p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-gray-300" />
+                  </Card>
+                </Link>
+              ))
+            )}
           </div>
         </div>
 
         {/* Recent Class Activity Widget */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-bold text-lg text-gray-900">Diskusi Kelas</h2>
-            <Link href="/chat" className="text-xs font-semibold text-pink-600">Buka Chat</Link>
+            <h2 className="font-bold text-lg text-gray-900">Aktivitas Terkini</h2>
+            <Link href="/classes" className="text-xs font-semibold text-pink-600">Lihat Kelas</Link>
           </div>
-          <Card className="p-4 border-0 shadow-sm rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 text-white">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <Users className="w-4 h-4 text-white" />
+          {!recentActivity || recentActivity.length === 0 ? (
+            <p className="text-center py-6 text-sm text-gray-400 border-2 border-dashed rounded-2xl">Belum ada aktivitas.</p>
+          ) : (
+            <Card className="p-4 border-0 shadow-sm rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 text-white">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                  <Users className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-300 mb-1">{recentActivity[0].action}</p>
+                  <p className="text-sm font-medium line-clamp-2">
+                    {recentActivity[0].details?.description || 'Aktivitas sistem baru tercatat.'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-gray-300 mb-1">X IPA 1 • Pak Budi</p>
-                <p className="text-sm font-medium line-clamp-2">Jangan lupa pelajari materi tentang Hukum Newton untuk kuis besok ya anak-anak.</p>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          )}
         </div>
       </main>
     </div>

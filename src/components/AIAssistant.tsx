@@ -83,6 +83,25 @@ export default function AIAssistant() {
 
                 <ScrollArea className="flex-1 p-4 bg-gray-50/50">
                     <div className="space-y-4">
+                        {messages.length === 1 && (
+                            <div className="grid grid-cols-1 gap-2 mb-2">
+                                {[
+                                    'Apa tugas tertunda saya?',
+                                    'Ringkas catatan terakhirku',
+                                    'Bantu aku jadwal belajar',
+                                    'Cari materi Matematika'
+                                ].map((prompt) => (
+                                    <button
+                                        key={prompt}
+                                        onClick={() => setQuery(prompt)}
+                                        className="text-left px-4 py-3 bg-white border border-indigo-100 rounded-xl text-xs text-indigo-700 hover:bg-indigo-50 transition-colors shadow-sm flex items-center gap-2 group"
+                                    >
+                                        <Sparkles className="w-3 h-3 text-indigo-400 group-hover:text-indigo-600" />
+                                        {prompt}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                         {messages.map((msg, i) => (
                             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-sm' : 'bg-white text-gray-800 border border-gray-100 rounded-tl-sm'}`}>

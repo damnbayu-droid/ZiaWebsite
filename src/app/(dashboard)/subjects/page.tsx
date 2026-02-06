@@ -42,7 +42,7 @@ export default function SubjectsPage() {
 
             const { data, error } = await supabase
                 .from('subjects')
-                .select('*')
+                .select('*, notes(count)')
                 .order('created_at', { ascending: false })
 
             if (error) throw error
@@ -166,7 +166,9 @@ export default function SubjectsPage() {
                                         <Book className="w-5 h-5" />
                                     </div>
                                     <h3 className="font-bold text-gray-900 line-clamp-2 leading-tight">{subject.name}</h3>
-                                    <p className="text-xs text-gray-400 mt-1">0 Catatan</p>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        {(subject as any).notes?.[0]?.count || 0} Catatan
+                                    </p>
                                 </Link>
                                 <div className="absolute top-2 right-2">
                                     <DropdownMenu>

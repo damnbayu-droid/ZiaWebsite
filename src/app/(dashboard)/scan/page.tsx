@@ -1,14 +1,18 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Loader2, Camera, ScanText, Copy, Check } from 'lucide-react'
+import { Loader2, Camera, ScanText, Copy, Check, Save } from 'lucide-react'
 import Tesseract from 'tesseract.js'
 
 export default function ScanPage() {
+    const router = useRouter()
+    const supabase = createClient()
     const [scanning, setScanning] = useState(false)
+    const [saving, setSaving] = useState(false)
     const [scannedText, setScannedText] = useState('')
     const [image, setImage] = useState<string | null>(null)
     const [copied, setCopied] = useState(false)
@@ -50,6 +54,37 @@ export default function ScanPage() {
         }
     }
 
+    const handleSaveToNotes = async () => {
+        if (!scannedText.trim()) return
+
+        try {
+            setSaving(true)
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) {
+                alert('Silakan login terlebih dahulu.')
+                return
+            }
+
+            const { error } = await supabase
+                .from('notes')
+                .insert({
+                    user_id: user.id,
+                    title: `Hasil Pindai ${new Date().toLocaleDateString('id-ID')}`,
+                    content: scannedText,
+                })
+
+            if (error) throw error
+
+            alert('Berhasil disimpan ke catatan!')
+            router.push('/notes')
+        } catch (error) {
+            console.error(error)
+            alert('Gagal menyimpan catatan.')
+        } finally {
+            setSaving(false)
+        }
+    }
+
     const copyText = () => {
         navigator.clipboard.writeText(scannedText)
         setCopied(true)
@@ -58,8 +93,19 @@ export default function ScanPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 pb-24 safe-area-inset-bottom">
-            <header className="bg-white px-4 py-4 sticky top-0 z-10 safe-area-inset-top shadow-sm">
+            <header className="bg-white px-4 py-4 sticky top-0 z-10 safe-area-inset-top shadow-sm flex items-center justify-between">
                 <h1 className="text-lg font-bold text-gray-900">Pindai Pintar (OCR)</h1>
+                {scannedText && (
+                    <Button
+                        size="sm"
+                        onClick={handleSaveToNotes}
+                        disabled={saving}
+                        className="rounded-full gradient-primary text-white"
+                    >
+                        {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                        Simpan ke Catatan
+                    </Button>
+                )}
             </header>
 
             <main className="max-w-lg mx-auto px-4 py-6 space-y-6">
@@ -93,10 +139,12 @@ export default function ScanPage() {
                     <Card className="p-4 border-0 shadow-sm rounded-2xl bg-white">
                         <div className="flex items-center justify-between mb-2">
                             <h3 className="font-semibold text-gray-900">Hasil Pindai</h3>
-                            <Button variant="ghost" size="sm" onClick={copyText} className="text-pink-600 hover:bg-pink-50">
-                                {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
-                                {copied ? 'Disalin' : 'Salin'}
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button variant="ghost" size="sm" onClick={copyText} className="text-pink-600 hover:bg-pink-50">
+                                    {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
+                                    {copied ? 'Disalin' : 'Salin'}
+                                </Button>
+                            </div>
                         </div>
                         <div className="p-3 bg-gray-50 rounded-xl text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                             {scannedText}
