@@ -9,11 +9,12 @@ FOR INSERT WITH CHECK (
   user_id = auth.uid()
 );
 
--- Ensure users can read their own identity
+-- Allow public reading of active identities (for QR code scanning)
 DROP POLICY IF EXISTS "identity_read_policy" ON public.student_identity;
 
 CREATE POLICY "identity_read_policy" ON public.student_identity
 FOR SELECT USING (
-  user_id = auth.uid() 
-  OR public.is_admin()
+  is_active = true  -- Anyone can read active identities
+  OR user_id = auth.uid()  -- Users can read their own
+  OR public.is_admin()  -- Admins can read all
 );
