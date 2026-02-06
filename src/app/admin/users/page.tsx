@@ -6,10 +6,14 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Loader2, UserPlus, CheckCircle, Search, Settings as SettingsIcon, Camera, ShieldAlert } from 'lucide-react'
+import { Loader2, UserPlus, CheckCircle, Search, QrCode, Edit, MessageSquare, Activity as ActivityIcon, Trash2, X } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
+import { format } from 'date-fns'
+import { id } from 'date-fns/locale'
+import Link from 'next/link'
 
 interface Student {
     id: string
@@ -17,12 +21,11 @@ interface Student {
     grade: string
     school: string
     avatar_url: string
-    role: string
     email?: string
     is_verified: boolean
-    account_status: 'active' | 'disabled' | 'suspended'
     identity?: {
         public_token: string
+        student_number: string | null
         is_active: boolean
         expires_at: string
     } | null
@@ -34,17 +37,14 @@ export default function UserManagementPage() {
     const [students, setStudents] = useState<Student[]>([])
     const [search, setSearch] = useState('')
     const [processing, setProcessing] = useState<string | null>(null)
-    const [editingStudent, setEditingStudent] = useState<Student | null>(null)
-    const [showCreateDialog, setShowCreateDialog] = useState(false)
-    const [newUser, setNewUser] = useState({
-        full_name: '',
-        email: '',
-        password: '',
-        school: '',
-        grade: '',
-        birth_place: '',
-        birth_date: ''
-    })
+
+    // Dialogs
+    const [barcodeStudent, setBarcodeStudent] = useState<Student | null>(null)
+    const [nisStudent, setNisStudent] = useState<Student | null>(null)
+    const [nisValue, setNisValue] = useState('')
+    const [activityStudent, setActivityStudent] = useState<Student | null>(null)
+    const [activities, setActivities] = useState<any[]>([])
+    const [deleteStudent, setDeleteStudent] = useState<Student | null>(null)
 
     useEffect(() => {
         fetchStudents()
@@ -57,7 +57,7 @@ export default function UserManagementPage() {
                 .from('profiles')
                 .select(`
                     *,
-                    identity:student_identity(public_token, is_active, expires_at)
+                    identity:student_identity(public_token, student_number, is_active, expires_at)
                 `)
                 .order('full_name')
 
@@ -76,174 +76,69 @@ export default function UserManagementPage() {
         }
     }
 
-    const verifyUser = async (studentId: string) => {
+    const handleUpdateNIS = async () => {
+        if (!nisStudent) return
         try {
-            setProcessing(studentId)
-            const { error } = await supabase
-                .from('profiles')
-                .update({ is_verified: true })
-                .eq('id', studentId)
+            setProcessing('nis')
 
-            if (error) throw error
-            await fetchStudents()
-        } catch (e) {
-            console.error(e)
-            alert('Gagal verifikasi user')
-        } finally {
-            setProcessing(null)
-        }
-    }
-
-    const generateIdentity = async (studentId: string) => {
-        try {
-            setProcessing(studentId)
-            const { data: schools } = await supabase.from('schools').select('id').limit(1)
-            const schoolId = schools?.[0]?.id
-
-            if (!schoolId) {
-                alert('School ID not found.')
+            // Check if identity exists
+            if (!nisStudent.identity) {
+                alert('User belum memiliki student identity')
                 return
             }
 
-            const token = crypto.randomUUID().split('-')[0].toUpperCase()
-
-            const { error } = await supabase.from('student_identity').insert({
-                user_id: studentId,
-                school_id: schoolId,
-                public_token: token,
-                activated_at: new Date().toISOString(),
-                expires_at: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(),
-                is_active: true
-            })
-
-            if (error) throw error
-            await fetchStudents()
-
-        } catch (e) {
-            console.error(e)
-            alert('Gagal generate identity')
-        } finally {
-            setProcessing(null)
-        }
-    }
-
-    const revokeIdentity = async (studentId: string) => {
-        if (!confirm('Yakin ingin mencabut identitas siswa ini?')) return
-        try {
-            setProcessing(studentId)
             const { error } = await supabase
                 .from('student_identity')
-                .update({ is_active: false })
-                .eq('user_id', studentId)
+                .update({ student_number: nisValue })
+                .eq('user_id', nisStudent.id)
 
             if (error) throw error
+
             await fetchStudents()
+            setNisStudent(null)
+            setNisValue('')
+            alert('NIS berhasil diperbarui')
         } catch (e) {
-            alert('Gagal revoke identity')
-        } finally {
-            setProcessing(null)
-        }
-    }
-
-    const handleCreateUser = async () => {
-        try {
-            setProcessing('create')
-            if (!newUser.email || !newUser.password || !newUser.full_name || !newUser.school || !newUser.grade) {
-                alert('Nama, Email, Password, Sekolah, dan Kelas harus diisi!')
-                return
-            }
-
-            // 1. Create Auth User
-            const { data: authData, error: authError } = await supabase.auth.signUp({
-                email: newUser.email,
-                password: newUser.password,
-                options: {
-                    data: {
-                        full_name: newUser.full_name
-                    }
-                }
-            })
-
-            if (authError) throw authError
-
-            // Note: If email confirmation is ON, we might not get a user ID back immediately.
-            // If it's OFF, the handle_new_user trigger will create the profile.
-            // We'll try to update the profile with all details if we can find it.
-            if (authData.user) {
-                const { error: profileError } = await supabase
-                    .from('profiles')
-                    .update({
-                        full_name: newUser.full_name,
-                        school: newUser.school,
-                        grade: newUser.grade,
-                        birth_place: newUser.birth_place,
-                        birth_date: newUser.birth_date || null,
-                        is_verified: true, // Manual creation = Verified
-                        account_status: 'active'
-                    })
-                    .eq('id', authData.user.id)
-
-                if (profileError) {
-                    console.warn('Profile was not updated immediately, it might take a moment sync:', profileError.message)
-                }
-            }
-
-            alert('User berhasil dibuat!')
-            setShowCreateDialog(false)
-            setNewUser({ full_name: '', email: '', password: '', school: '', grade: '', birth_place: '', birth_date: '' })
-            await fetchStudents()
-        } catch (e: any) {
             console.error(e)
-            alert(`Gagal membuat user: ${e.message}`)
+            alert('Gagal update NIS')
         } finally {
             setProcessing(null)
         }
     }
 
-    const handleUpdateStudent = async () => {
-        if (!editingStudent) return
+    const fetchUserActivity = async (userId: string) => {
         try {
-            setProcessing('save')
-            const { error } = await supabase.from('profiles').update({
-                full_name: editingStudent.full_name,
-                grade: editingStudent.grade,
-                avatar_url: editingStudent.avatar_url
-            }).eq('id', editingStudent.id)
+            const { data } = await supabase
+                .from('activity_logs')
+                .select('*')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false })
+                .limit(20)
+
+            setActivities(data || [])
+        } catch (e) {
+            console.error(e)
+        }
+    }
+
+    const handleDeleteUser = async () => {
+        if (!deleteStudent) return
+        try {
+            setProcessing('delete')
+
+            const { error } = await supabase
+                .from('profiles')
+                .delete()
+                .eq('id', deleteStudent.id)
 
             if (error) throw error
+
             await fetchStudents()
-            setEditingStudent(null)
-            alert('Data siswa berhasil diperbarui')
+            setDeleteStudent(null)
+            alert('User berhasil dihapus')
         } catch (e) {
             console.error(e)
-            alert('Gagal update siswa')
-        } finally {
-            setProcessing(null)
-        }
-    }
-
-    const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!editingStudent || !e.target.files || !e.target.files[0]) return
-        try {
-            setProcessing('upload')
-            const file = e.target.files[0]
-            const fileExt = file.name.split('.').pop()
-            const filePath = `${editingStudent.id}/${Math.random()}.${fileExt}`
-
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(filePath, file)
-
-            if (uploadError) throw uploadError
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
-                .getPublicUrl(filePath)
-
-            setEditingStudent({ ...editingStudent, avatar_url: publicUrl })
-        } catch (error: any) {
-            console.error(error)
-            alert(`Gagal upload foto: ${error.message}`)
+            alert('Gagal menghapus user')
         } finally {
             setProcessing(null)
         }
@@ -261,21 +156,14 @@ export default function UserManagementPage() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight">User Management</h2>
-                    <p className="text-gray-500">Kelola pengguna, verifikasi, dan identitas.</p>
+                    <p className="text-gray-500">Kelola pengguna, barcode, NIS, dan aktivitas.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button
-                        onClick={() => setShowCreateDialog(true)}
-                        className="bg-pink-600 hover:bg-pink-700 text-white gap-2"
-                    >
-                        <UserPlus className="w-4 h-4" />
-                        Add New User
-                    </Button>
                     <Card className="px-4 py-2 bg-white border shadow-sm flex items-center gap-3">
                         <CheckCircle className="w-5 h-5 text-green-500" />
                         <div>
-                            <p className="text-xs text-gray-500">Aktif</p>
-                            <p className="font-bold">{students.filter(s => s.identity?.is_active).length}</p>
+                            <p className="text-xs text-gray-500">Verified</p>
+                            <p className="font-bold">{students.filter(s => s.is_verified).length}</p>
                         </div>
                     </Card>
                     <Card className="px-4 py-2 bg-white border shadow-sm flex items-center gap-3">
@@ -299,224 +187,233 @@ export default function UserManagementPage() {
                 />
             </div>
 
-            {/* List */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredStudents.map(student => (
-                    <Card key={student.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                        <CardContent className="p-0">
-                            <div className="flex items-center gap-4 p-4">
-                                <Avatar className="w-12 h-12 border border-gray-100">
-                                    <AvatarImage src={student.avatar_url} />
-                                    <AvatarFallback className="bg-gray-100 text-gray-600 font-medium">
-                                        {student.full_name?.[0]?.toUpperCase() || 'S'}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <div className="min-w-0 flex-1">
-                                    <h3 className="font-semibold text-gray-900 truncate" title={student.full_name}>
-                                        {student.full_name}
-                                    </h3>
-                                    <p className="text-xs text-gray-500 truncate">
-                                        {student.grade || 'Kelas ?'} • {student.school || 'Sekolah ?'}
-                                    </p>
-                                    {student.email && (
-                                        <p className="text-[10px] text-gray-400 truncate mt-0.5">
-                                            {student.email}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
+            {/* User Table */}
+            <Card>
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="bg-gray-50 border-b">
+                                <tr>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Grade</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">NIS</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y">
+                                {filteredStudents.map(student => (
+                                    <tr key={student.id} className="hover:bg-gray-50">
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="w-10 h-10">
+                                                    <AvatarImage src={student.avatar_url} />
+                                                    <AvatarFallback>{student.full_name?.[0]}</AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <p className="font-medium text-gray-900">{student.full_name}</p>
+                                                    <p className="text-xs text-gray-500">{student.email}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">{student.grade || '-'}</td>
+                                        <td className="px-4 py-3">
+                                            <span className="font-mono text-sm">
+                                                {student.identity?.student_number || '-'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {student.is_verified ? (
+                                                <Badge className="bg-green-100 text-green-700 border-0">Verified</Badge>
+                                            ) : (
+                                                <Badge variant="secondary">Pending</Badge>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-8 w-8 p-0"
+                                                    onClick={() => setBarcodeStudent(student)}
+                                                    title="View Barcode"
+                                                >
+                                                    <QrCode className="w-4 h-4" />
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-8 w-8 p-0"
+                                                    onClick={() => {
+                                                        setNisStudent(student)
+                                                        setNisValue(student.identity?.student_number || '')
+                                                    }}
+                                                    title="Edit NIS"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </Button>
+                                                <Link href={`/messages?user=${student.id}`}>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="h-8 w-8 p-0"
+                                                        title="Message User"
+                                                    >
+                                                        <MessageSquare className="w-4 h-4" />
+                                                    </Button>
+                                                </Link>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-8 w-8 p-0"
+                                                    onClick={() => {
+                                                        setActivityStudent(student)
+                                                        fetchUserActivity(student.id)
+                                                    }}
+                                                    title="View Activity"
+                                                >
+                                                    <ActivityIcon className="w-4 h-4" />
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                    onClick={() => setDeleteStudent(student)}
+                                                    title="Delete User"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+            </Card>
 
-                            <div className="border-t bg-gray-50/50 p-3 flex items-center justify-between">
-                                <div>
-                                    {student.identity ? (
-                                        student.identity.is_active ? (
-                                            <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-0">
-                                                ID Aktif
-                                            </Badge>
-                                        ) : (
-                                            <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-200 border-0">
-                                                Revoked
-                                            </Badge>
-                                        )
-                                    ) : (
-                                        <Badge variant="secondary" className="bg-gray-100 text-gray-500">Belum Ada ID</Badge>
-                                    )}
-                                </div>
-
-                                {student.identity?.is_active ? (
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="text-red-600 hover:bg-red-50 hover:text-red-700 h-8 w-8 p-0"
-                                        onClick={() => revokeIdentity(student.id)}
-                                        disabled={processing === student.id}
-                                    >
-                                        {processing === student.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldAlert className="w-4 h-4" />}
-                                    </Button>
-                                ) : (
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="h-8 text-xs border-blue-200 text-blue-600 hover:bg-blue-50"
-                                        onClick={() => generateIdentity(student.id)}
-                                        disabled={processing === student.id}
-                                    >
-                                        {processing === student.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Generate ID'}
-                                    </Button>
-                                )}
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-8 w-8 p-0 ml-1 text-gray-500 hover:text-gray-900"
-                                    onClick={() => setEditingStudent(student)}
-                                >
-                                    <SettingsIcon className="w-4 h-4" />
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-
-            {/* Edit Dialog */}
-            <Dialog open={!!editingStudent} onOpenChange={(open) => !open && setEditingStudent(null)}>
-                <DialogContent>
+            {/* Barcode Modal */}
+            <Dialog open={!!barcodeStudent} onOpenChange={(open) => !open && setBarcodeStudent(null)}>
+                <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Edit Siswa</DialogTitle>
-                        <DialogDescription>Perbarui data profil dan foto siswa.</DialogDescription>
+                        <DialogTitle>Barcode Siswa</DialogTitle>
+                        <DialogDescription>{barcodeStudent?.full_name}</DialogDescription>
                     </DialogHeader>
-                    {editingStudent && (
-                        <div className="space-y-4 py-2">
-                            <div className="flex justify-center mb-4">
-                                <div className="relative group w-24 h-24">
-                                    <Avatar className="w-24 h-24 border-2 border-gray-100">
-                                        <AvatarImage src={editingStudent.avatar_url || ''} />
-                                        <AvatarFallback>{editingStudent.full_name[0]}</AvatarFallback>
-                                    </Avatar>
-                                    <label htmlFor="edit-avatar" className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white">
-                                        <Camera className="w-6 h-6" />
-                                    </label>
-                                    <input
-                                        type="file"
-                                        id="edit-avatar"
-                                        className="hidden"
-                                        accept="image/*"
-                                        onChange={handleAvatarUpload}
-                                        disabled={processing === 'upload'}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label>Nama Lengkap</Label>
-                                <Input
-                                    value={editingStudent.full_name}
-                                    onChange={(e) => setEditingStudent({ ...editingStudent, full_name: e.target.value })}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Kelas</Label>
-                                <Input
-                                    value={editingStudent.grade || ''}
-                                    onChange={(e) => setEditingStudent({ ...editingStudent, grade: e.target.value })}
-                                />
-                            </div>
-                            <Button
-                                className="w-full mt-4 bg-pink-600 hover:bg-pink-700"
-                                onClick={handleUpdateStudent}
-                                disabled={processing === 'save'}
-                            >
-                                {processing === 'save' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan Perubahan'}
-                            </Button>
+                    {barcodeStudent && (
+                        <div className="flex flex-col items-center py-4 space-y-4">
+                            {barcodeStudent.identity ? (
+                                <>
+                                    <div className="bg-white p-4 rounded-xl border">
+                                        <QRCodeSVG
+                                            value={`https://zia.biz.id/id/${barcodeStudent.identity.public_token}`}
+                                            size={200}
+                                            level="H"
+                                            includeMargin
+                                        />
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-xs text-gray-500">Token</p>
+                                        <p className="font-mono text-sm">{barcodeStudent.identity.public_token}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-xs text-gray-500">NIS</p>
+                                        <p className="font-mono font-bold">{barcodeStudent.identity.student_number || '-'}</p>
+                                    </div>
+                                </>
+                            ) : (
+                                <p className="text-gray-400">Belum ada barcode</p>
+                            )}
                         </div>
                     )}
                 </DialogContent>
             </Dialog>
 
-            {/* Create Dialog */}
-            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-                <DialogContent className="max-w-md">
+            {/* NIS Edit Modal */}
+            <Dialog open={!!nisStudent} onOpenChange={(open) => !open && setNisStudent(null)}>
+                <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Buat Akun Siswa Baru</DialogTitle>
-                        <DialogDescription>Daftarkan siswa baru secara manual.</DialogDescription>
+                        <DialogTitle>Edit NIS</DialogTitle>
+                        <DialogDescription>{nisStudent?.full_name}</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-2">
                         <div className="space-y-2">
-                            <Label>Nama Lengkap</Label>
+                            <Label>Nomor Induk Siswa (NIS)</Label>
                             <Input
-                                value={newUser.full_name}
-                                onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
-                                placeholder="Nama Lengkap"
+                                value={nisValue}
+                                onChange={(e) => setNisValue(e.target.value)}
+                                placeholder="Masukkan NIS"
                             />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Email</Label>
-                                <Input
-                                    type="email"
-                                    value={newUser.email}
-                                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                                    placeholder="email@sekolah.com"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Kata Sandi</Label>
-                                <Input
-                                    type="password"
-                                    value={newUser.password}
-                                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                                    placeholder="••••••••"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Tempat Lahir</Label>
-                                <Input
-                                    value={newUser.birth_place}
-                                    onChange={(e) => setNewUser({ ...newUser, birth_place: e.target.value })}
-                                    placeholder="Tempat Lahir"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Tanggal Lahir</Label>
-                                <Input
-                                    type="date"
-                                    value={newUser.birth_date}
-                                    onChange={(e) => setNewUser({ ...newUser, birth_date: e.target.value })}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Sekolah</Label>
-                                <Input
-                                    value={newUser.school}
-                                    onChange={(e) => setNewUser({ ...newUser, school: e.target.value })}
-                                    placeholder="Nama Sekolah"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Kelas</Label>
-                                <Input
-                                    value={newUser.grade}
-                                    onChange={(e) => setNewUser({ ...newUser, grade: e.target.value })}
-                                    placeholder="Contoh: X IPA 1"
-                                />
-                            </div>
-                        </div>
                         <Button
-                            className="w-full mt-4 bg-pink-600 hover:bg-pink-700"
-                            onClick={handleCreateUser}
-                            disabled={processing === 'create'}
+                            className="w-full"
+                            onClick={handleUpdateNIS}
+                            disabled={processing === 'nis'}
                         >
-                            {processing === 'create' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buat Akun & Verifikasi'}
+                            {processing === 'nis' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan NIS'}
                         </Button>
                     </div>
                 </DialogContent>
             </Dialog>
-        </div >
+
+            {/* Activity Logs Modal */}
+            <Dialog open={!!activityStudent} onOpenChange={(open) => !open && setActivityStudent(null)}>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Activity Logs</DialogTitle>
+                        <DialogDescription>{activityStudent?.full_name}</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2">
+                        {activities.length === 0 ? (
+                            <p className="text-center text-gray-400 py-8">No activity recorded</p>
+                        ) : (
+                            activities.map((activity) => (
+                                <div key={activity.id} className="border-l-2 border-blue-500 pl-4 py-2 bg-gray-50 rounded-r">
+                                    <p className="text-sm font-medium">{activity.action}</p>
+                                    <p className="text-xs text-gray-500">
+                                        {format(new Date(activity.created_at), 'dd MMM yyyy HH:mm', { locale: id })}
+                                    </p>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation */}
+            <Dialog open={!!deleteStudent} onOpenChange={(open) => !open && setDeleteStudent(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Hapus User</DialogTitle>
+                        <DialogDescription>
+                            Yakin ingin menghapus <strong>{deleteStudent?.full_name}</strong>?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 my-4">
+                        <p className="text-sm text-red-700">
+                            ⚠️ Tindakan ini akan menghapus semua data user termasuk:
+                        </p>
+                        <ul className="text-xs text-red-600 mt-2 ml-4 list-disc">
+                            <li>Profil dan identitas</li>
+                            <li>Assignments dan notes</li>
+                            <li>Messages dan activity logs</li>
+                            <li>Class memberships</li>
+                        </ul>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDeleteStudent(null)}>
+                            Batal
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDeleteUser}
+                            disabled={processing === 'delete'}
+                        >
+                            {processing === 'delete' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Hapus User'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
     )
 }
