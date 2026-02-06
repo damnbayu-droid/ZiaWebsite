@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Loader2, Plus, Book, MoreVertical, Trash2, Edit2 } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { BottomNav } from '@/components/BottomNav'
 
 export interface Subject {
     id: string
@@ -190,6 +191,7 @@ export default function SubjectsPage() {
                     </div>
                 )}
             </main>
+            <BottomNav />
         </div>
     )
 }

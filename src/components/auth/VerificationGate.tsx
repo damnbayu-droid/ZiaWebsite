@@ -11,7 +11,7 @@ export function VerificationGate({ children }: { children: React.ReactNode }) {
     const [verified, setVerified] = useState<boolean | null>(null)
 
     // Public routes that don't need verification
-    const publicRoutes = ['/login', '/auth/callback', '/pending-verification']
+    const publicRoutes = ['/', '/login', '/auth/callback', '/pending-verification']
 
     useEffect(() => {
         if (publicRoutes.includes(pathname)) {

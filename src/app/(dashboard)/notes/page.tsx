@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Plus, Search, FileText, Calendar, ArrowLeft } from 'lucide-react'
 import { format } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
+import { BottomNav } from '@/components/BottomNav'
 
 export default function NotesPage() {
     const supabase = createClient()
@@ -109,6 +110,7 @@ export default function NotesPage() {
                     ))
                 )}
             </main>
+            <BottomNav />
         </div>
     )
 }

@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Loader2, Camera, User, School, GraduationCap, ArrowLeft, LogOut, QrCode, ChevronRight } from 'lucide-react'
+import { BottomNav } from '@/components/BottomNav'
 
 // Define Profile interface locally or import from types
 interface Profile {
@@ -341,6 +342,7 @@ export default function ProfilePage() {
 
 
             </main>
+            <BottomNav />
         </div >
     )
 }
