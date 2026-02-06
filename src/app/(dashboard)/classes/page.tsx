@@ -2,24 +2,32 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Loader2, Plus, Users, Hash, ArrowLeft } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Loader2, Plus, Users, ArrowLeft, Trash2, GraduationCap } from 'lucide-react'
+import { BottomNav } from '@/components/BottomNav'
 
 export default function ClassesPage() {
+    const router = useRouter()
     const supabase = createClient()
+
     const [classes, setClasses] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
-    const [isJoinOpen, setIsJoinOpen] = useState(false)
     const [isCreateOpen, setIsCreateOpen] = useState(false)
-
-    const [joinCode, setJoinCode] = useState('')
-    const [newClassName, setNewClassName] = useState('')
     const [submitting, setSubmitting] = useState(false)
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+    const [isAdmin, setIsAdmin] = useState(false)
+
+    const [newClassName, setNewClassName] = useState('')
+    const [gradeLevel, setGradeLevel] = useState('')
+    const [description, setDescription] = useState('')
 
     useEffect(() => {
         fetchClasses()
@@ -31,11 +39,25 @@ export default function ClassesPage() {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return
 
-            // Fetch classes where user is member or owner
-            // This view policy should already handle it.
+            setCurrentUserId(user.id)
+
+            // Check if admin
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single()
+
+            setIsAdmin(profile?.role === 'admin')
+
+            // Fetch all classes
             const { data, error } = await supabase
                 .from('classes')
-                .select('*')
+                .select(`
+                    *,
+                    creator:created_by(full_name),
+                    members:class_members(count)
+                `)
                 .order('created_at', { ascending: false })
 
             if (error) throw error
@@ -47,73 +69,32 @@ export default function ClassesPage() {
         }
     }
 
-    const handleJoinClass = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!joinCode) return
-
-        try {
-            setSubmitting(true)
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) return
-
-            // Find class by code
-            const { data: classData, error: findError } = await supabase
-                .from('classes')
-                .select('id')
-                .eq('code', joinCode)
-                .single()
-
-            if (findError || !classData) {
-                alert('Kode kelas tidak valid')
-                return
-            }
-
-            // Join
-            const { error: joinError } = await supabase
-                .from('class_members')
-                .insert({
-                    class_id: classData.id,
-                    user_id: user.id,
-                    role: 'student'
-                })
-
-            if (joinError) throw joinError
-
-            setJoinCode('')
-            setIsJoinOpen(false)
-            fetchClasses()
-            alert('Berhasil bergabung ke kelas!')
-        } catch (error) {
-            // if unique violation
-            alert('Kamu sudah bergabung di kelas ini atau terjadi kesalahan.')
-            console.error(error)
-        } finally {
-            setSubmitting(false)
-        }
-    }
-
     const handleCreateClass = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!newClassName) return
+        if (!newClassName || !gradeLevel) {
+            alert('Nama kelas dan tingkat harus diisi!')
+            return
+        }
 
         try {
             setSubmitting(true)
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return
-
-            const code = Math.random().toString(36).substring(2, 8).toUpperCase()
 
             const { error } = await supabase
                 .from('classes')
                 .insert({
-                    owner_id: user.id,
                     name: newClassName,
-                    code: code
+                    grade_level: gradeLevel,
+                    description: description || null,
+                    created_by: user.id
                 })
 
             if (error) throw error
 
             setNewClassName('')
+            setGradeLevel('')
+            setDescription('')
             setIsCreateOpen(false)
             fetchClasses()
             alert('Kelas berhasil dibuat!')
@@ -125,6 +106,29 @@ export default function ClassesPage() {
         }
     }
 
+    const handleDeleteClass = async (classId: string, createdBy: string) => {
+        if (!confirm('Yakin ingin menghapus kelas ini?')) return
+
+        try {
+            const { error } = await supabase
+                .from('classes')
+                .delete()
+                .eq('id', classId)
+
+            if (error) throw error
+
+            fetchClasses()
+            alert('Kelas berhasil dihapus!')
+        } catch (error) {
+            console.error(error)
+            alert('Gagal menghapus kelas')
+        }
+    }
+
+    const canDeleteClass = (createdBy: string) => {
+        return isAdmin || createdBy === currentUserId
+    }
+
     return (
         <div className="min-h-screen bg-gray-50 pb-24 safe-area-inset-bottom">
             <header className="bg-white px-4 py-4 sticky top-0 z-10 safe-area-inset-top shadow-sm flex items-center justify-between">
@@ -132,84 +136,126 @@ export default function ClassesPage() {
                     <Link href="/" className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors">
                         <ArrowLeft className="w-5 h-5 text-gray-600" />
                     </Link>
-                    <h1 className="text-lg font-bold text-gray-900">Kelas Saya</h1>
+                    <h1 className="text-lg font-bold text-gray-900">Kelas</h1>
                 </div>
-                <div className="flex gap-2">
-                    <Dialog open={isJoinOpen} onOpenChange={setIsJoinOpen}>
-                        <DialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="rounded-full text-xs h-8">
-                                Gabung
+                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                    <DialogTrigger asChild>
+                        <Button size="sm" className="rounded-full h-8 w-8 p-0 bg-pink-500 hover:bg-pink-600">
+                            <Plus className="w-5 h-5 text-white" />
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md rounded-2xl">
+                        <DialogHeader>
+                            <DialogTitle>Buat Kelas Baru</DialogTitle>
+                            <DialogDescription>Buat ruang belajar untuk siswa.</DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleCreateClass} className="space-y-4 py-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="name">Nama Kelas *</Label>
+                                <Input
+                                    id="name"
+                                    placeholder="Misal: IPA 1"
+                                    value={newClassName}
+                                    onChange={e => setNewClassName(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="grade">Tingkat *</Label>
+                                <Select value={gradeLevel} onValueChange={setGradeLevel} required>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih tingkat" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="X">Kelas X</SelectItem>
+                                        <SelectItem value="XI">Kelas XI</SelectItem>
+                                        <SelectItem value="XII">Kelas XII</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="desc">Deskripsi (Opsional)</Label>
+                                <Textarea
+                                    id="desc"
+                                    placeholder="Deskripsi kelas"
+                                    value={description}
+                                    onChange={e => setDescription(e.target.value)}
+                                    className="min-h-[80px]"
+                                />
+                            </div>
+                            <Button type="submit" disabled={submitting} className="w-full rounded-xl gradient-primary text-white">
+                                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buat Kelas'}
                             </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-md rounded-2xl">
-                            <DialogHeader>
-                                <DialogTitle>Gabung Kelas</DialogTitle>
-                                <DialogDescription>Masukkan kode undangan dari gurumu.</DialogDescription>
-                            </DialogHeader>
-                            <form onSubmit={handleJoinClass} className="space-y-4 py-2">
-                                <div className="space-y-2">
-                                    <Label htmlFor="code">Kode Kelas</Label>
-                                    <Input id="code" placeholder="Misal: ABC1234" value={joinCode} onChange={e => setJoinCode(e.target.value)} />
-                                </div>
-                                <Button type="submit" disabled={submitting} className="w-full rounded-xl gradient-primary text-white">
-                                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Gabung Sekarang'}
-                                </Button>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
-
-                    <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                        <DialogTrigger asChild>
-                            <Button size="sm" className="rounded-full h-8 w-8 p-0 bg-pink-500 hover:bg-pink-600">
-                                <Plus className="w-5 h-5 text-white" />
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-md rounded-2xl">
-                            <DialogHeader>
-                                <DialogTitle>Buat Kelas Baru</DialogTitle>
-                                <DialogDescription>Buat ruang belajar bersama teman.</DialogDescription>
-                            </DialogHeader>
-                            <form onSubmit={handleCreateClass} className="space-y-4 py-2">
-                                <div className="space-y-2">
-                                    <Label htmlFor="name">Nama Kelas</Label>
-                                    <Input id="name" placeholder="Misal: Kelompok Belajar Biologi" value={newClassName} onChange={e => setNewClassName(e.target.value)} />
-                                </div>
-                                <Button type="submit" disabled={submitting} className="w-full rounded-xl bg-pink-600 hover:bg-pink-700">
-                                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buat Kelas'}
-                                </Button>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
-                </div>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </header>
 
             <main className="max-w-lg mx-auto px-4 py-6 space-y-4">
-                {loading ? <p className="text-center text-sm text-gray-500">Memuat kelas...</p> :
-                    classes.length === 0 ? (
-                        <div className="text-center py-20 text-gray-500">
-                            <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                            <p>Belum bergabung di kelas manapun.</p>
-                        </div>
-                    ) : (
-                        classes.map(cls => (
-                            <Card key={cls.id} className="border-0 shadow-sm rounded-2xl p-5 hover:shadow-md transition-shadow">
-                                <div className="flex items-start justify-between">
-                                    <div>
-                                        <h3 className="font-bold text-gray-900 text-lg">{cls.name}</h3>
-                                        <div className="flex items-center gap-1 text-xs text-gray-500 mt-1 bg-gray-100 w-fit px-2 py-1 rounded-lg">
-                                            <Hash className="w-3 h-3" />
-                                            <span className="font-mono tracking-widest">{cls.code}</span>
+                {/* Grade Level Sections */}
+                {['X', 'XI', 'XII'].map(grade => {
+                    const gradeClasses = classes.filter(c => c.grade_level === grade)
+                    if (gradeClasses.length === 0) return null
+
+                    return (
+                        <div key={grade} className="space-y-3">
+                            <div className="flex items-center gap-2 px-2">
+                                <GraduationCap className="w-4 h-4 text-pink-600" />
+                                <h2 className="font-bold text-sm text-gray-700 uppercase tracking-wider">Kelas {grade}</h2>
+                            </div>
+                            {gradeClasses.map(cls => (
+                                <Link key={cls.id} href={`/classes/${cls.id}`}>
+                                    <Card className="border-0 shadow-sm rounded-2xl p-4 hover:shadow-md transition-shadow">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <h3 className="font-bold text-gray-900">{cls.name}</h3>
+                                                {cls.description && (
+                                                    <p className="text-xs text-gray-500 mt-1 line-clamp-1">{cls.description}</p>
+                                                )}
+                                                <div className="flex items-center gap-3 mt-2">
+                                                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                                                        <Users className="w-3 h-3" />
+                                                        <span>{cls.members?.[0]?.count || 0} siswa</span>
+                                                    </div>
+                                                    <span className="text-xs text-gray-400">
+                                                        oleh {cls.creator?.full_name || 'Unknown'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {canDeleteClass(cls.created_by) && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.preventDefault()
+                                                        handleDeleteClass(cls.id, cls.created_by)
+                                                    }}
+                                                    className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4 text-red-500" />
+                                                </button>
+                                            )}
                                         </div>
-                                    </div>
-                                    <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-                                        <Users className="w-5 h-5" />
-                                    </div>
-                                </div>
-                            </Card>
-                        ))
+                                    </Card>
+                                </Link>
+                            ))}
+                        </div>
                     )
-                }
+                })}
+
+                {loading && (
+                    <div className="text-center py-12">
+                        <Loader2 className="w-8 h-8 animate-spin text-pink-500 mx-auto" />
+                    </div>
+                )}
+
+                {!loading && classes.length === 0 && (
+                    <div className="text-center py-20 text-gray-500">
+                        <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                        <p>Belum ada kelas.</p>
+                        <p className="text-sm mt-1">Klik tombol + untuk membuat kelas baru.</p>
+                    </div>
+                )}
             </main>
+            <BottomNav />
         </div>
     )
 }
